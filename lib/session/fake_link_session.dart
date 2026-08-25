@@ -5,12 +5,13 @@ import 'package:blue_app/session/scan_kind.dart';
 import 'package:rxdart/rxdart.dart';
 
 class FakeLinkSession implements LinkSession {
-  FakeLinkSession({required this.scanKind});
+  FakeLinkSession({required this.scanKind, this._hasGattTree});
 
   @override
   final ScanKind scanKind;
+  final bool? _hasGattTree;
   @override
-  bool get hasGattTree => scanKind == ScanKind.ble;
+  bool get hasGattTree => _hasGattTree ?? scanKind == ScanKind.ble;
   @override
   ScanItem? connectedItem;
 
@@ -18,8 +19,14 @@ class FakeLinkSession implements LinkSession {
   int disconnectCount = 0;
   int disposeCount = 0;
   int connectCount = 0;
+  int sendCount = 0;
+  int turnOnCount = 0;
+  int startScanCount = 0;
   ScanItem? lastConnected;
+  List<int>? lastSent;
   Object? connectError;
+  Object? startScanError;
+  Object? turnOnError;
   bool bluetoothOn = true;
 
   final _scanResults$ = BehaviorSubject<List<ScanItem>>.seeded(const []);
@@ -43,9 +50,21 @@ class FakeLinkSession implements LinkSession {
   @override
   Future<bool> isBluetoothOn() async => bluetoothOn;
   @override
-  Future<void> turnOnBluetooth() async {}
+  Future<void> turnOnBluetooth() async {
+    turnOnCount += 1;
+    if (turnOnError != null) {
+      throw turnOnError!;
+    }
+    bluetoothOn = true;
+  }
   @override
-  Future<void> startScan({Duration timeout = const Duration(seconds: 15)}) async {}
+  Future<void> startScan({Duration timeout = const Duration(seconds: 15)}) async {
+    startScanCount += 1;
+    if (startScanError != null) {
+      throw startScanError!;
+    }
+    _isScanning$.add(true);
+  }
   @override
   Future<void> stopScan() async => stopScanCount += 1;
   @override
@@ -65,7 +84,10 @@ class FakeLinkSession implements LinkSession {
     _isConnected$.add(false);
   }
   @override
-  Future<void> send(List<int> bytes) async {}
+  Future<void> send(List<int> bytes) async {
+    sendCount += 1;
+    lastSent = List<int>.from(bytes);
+  }
   @override
   void clearLogs() {}
   @override

@@ -10,6 +10,7 @@ import 'package:blue_app/theme/blue_text_styles.dart';
 import 'package:blue_app/theme/blue_theme.dart';
 import 'package:blue_app/widgets/blue_primary_button.dart';
 import 'package:blue_app/widgets/blue_rssi_bars.dart';
+import 'package:blue_app/widgets/blue_scan_actions.dart';
 import 'package:flutter/material.dart';
 
 /// 扫描列表面板。
@@ -24,6 +25,10 @@ class BlueScanPane extends StatefulWidget {
     required this.onConnectingIdChanged,
     required this.onConnectSucceeded,
     this.compact = false,
+    this.showClassicFilter = false,
+    this.radioFilter = RadioFilter.ble,
+    this.onRadioFilterChanged,
+    this.tryTurnOnIfOff = false,
   });
 
   final LinkSession session;
@@ -34,13 +39,20 @@ class BlueScanPane extends StatefulWidget {
   final ValueChanged<String?> onConnectingIdChanged;
   final VoidCallback onConnectSucceeded;
   final bool compact;
+  final bool showClassicFilter;
+  final RadioFilter radioFilter;
+  final ValueChanged<RadioFilter>? onRadioFilterChanged;
+  final bool tryTurnOnIfOff;
 
   @override
-  State<BlueScanPane> createState() => _BlueScanPaneState();
+  State<BlueScanPane> createState() => BlueScanPaneState();
 }
 
-class _BlueScanPaneState extends State<BlueScanPane> {
+class BlueScanPaneState extends State<BlueScanPane> {
   String _keyword = '';
+  bool _permissionDenied = false;
+  bool _scanning = false;
+  StreamSubscription<bool>? _scanningSub;
 
   BlueLayoutStyles get _styles => widget.compact ? BlueLayoutStyles.wide : BlueLayoutStyles.phone;
 
@@ -49,10 +61,36 @@ class _BlueScanPaneState extends State<BlueScanPane> {
     super.initState();
     _keyword = widget.keywordController.text;
     widget.keywordController.addListener(_onKeywordChanged);
+    _listenScanning(widget.session);
+  }
+
+  @override
+  void didUpdateWidget(covariant BlueScanPane oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.keywordController != widget.keywordController) {
+      oldWidget.keywordController.removeListener(_onKeywordChanged);
+      widget.keywordController.addListener(_onKeywordChanged);
+      _keyword = widget.keywordController.text;
+    }
+    if (oldWidget.session != widget.session) {
+      _permissionDenied = false;
+      _listenScanning(widget.session);
+    }
+  }
+
+  void _listenScanning(LinkSession session) {
+    unawaited(_scanningSub?.cancel());
+    _scanning = false;
+    _scanningSub = session.isScanning$.listen((value) {
+      if (mounted) {
+        setState(() => _scanning = value);
+      }
+    });
   }
 
   @override
   void dispose() {
+    unawaited(_scanningSub?.cancel());
     widget.keywordController.removeListener(_onKeywordChanged);
     super.dispose();
   }
@@ -74,21 +112,18 @@ class _BlueScanPaneState extends State<BlueScanPane> {
     }
   }
 
-  Future<void> _toggleScan(bool scanning) async {
-    try {
-      if (scanning) {
-        await widget.session.stopScan();
-      } else {
-        final on = await widget.session.isBluetoothOn();
-        if (!on) {
-          _toast('请先打开蓝牙');
-          return;
+  Future<void> toggleScan() async {
+    await BlueScanActions.toggleScan(
+      session: widget.session,
+      scanning: _scanning,
+      tryTurnOnIfOff: widget.tryTurnOnIfOff,
+      onToast: _toast,
+      onPermissionDenied: (denied) {
+        if (mounted) {
+          setState(() => _permissionDenied = denied);
         }
-        await widget.session.startScan();
-      }
-    } catch (e) {
-      _toast('$e');
-    }
+      },
+    );
   }
 
   void _toast(String message) {
@@ -138,6 +173,15 @@ class _BlueScanPaneState extends State<BlueScanPane> {
                   connectable: item.connectable,
                 );
               }).toList();
+              if (_permissionDenied) {
+                return Center(
+                  child: Text(
+                    '没有蓝牙权限，无法扫描',
+                    textAlign: TextAlign.center,
+                    style: BlueTextStyles.caption(context).copyWith(color: palette.textMuted, height: 1.5),
+                  ),
+                );
+              }
               if (filtered.isEmpty) {
                 return Center(
                   child: Text(
@@ -209,7 +253,7 @@ class _BlueScanPaneState extends State<BlueScanPane> {
                       minimumSize: const Size(0, 32),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    onPressed: () => unawaited(_toggleScan(scanning)),
+                    onPressed: () => unawaited(toggleScan()),
                     child: Text(
                       scanning ? '停止' : '扫描',
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scanning ? palette.warn : palette.accent),
@@ -232,6 +276,10 @@ class _BlueScanPaneState extends State<BlueScanPane> {
           ),
           SizedBox(height: styles.scanFilterFieldGap),
           _buildHideInvalidRow(context, styles: styles),
+          if (widget.showClassicFilter) ...[
+            SizedBox(height: styles.scanFilterFieldGap),
+            _buildClassicFilter(context),
+          ],
         ],
       ),
     );
@@ -262,9 +310,30 @@ class _BlueScanPaneState extends State<BlueScanPane> {
             ),
             SizedBox(height: styles.scanFilterFieldGap),
             _buildHideInvalidRow(context, styles: styles),
+            if (widget.showClassicFilter) ...[
+              SizedBox(height: styles.scanFilterFieldGap),
+              _buildClassicFilter(context),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildClassicFilter(BuildContext context) {
+    return SegmentedButton<RadioFilter>(
+      showSelectedIcon: false,
+      segments: const [
+        ButtonSegment<RadioFilter>(value: RadioFilter.ble, label: Text('低功耗')),
+        ButtonSegment<RadioFilter>(value: RadioFilter.classic, label: Text('经典')),
+      ],
+      selected: {widget.radioFilter},
+      onSelectionChanged: (selected) {
+        if (selected.isEmpty) {
+          return;
+        }
+        widget.onRadioFilterChanged?.call(selected.first);
+      },
     );
   }
 

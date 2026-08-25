@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>BlueApp 需要蓝牙扫描、连接设备并收发调试数据。</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>BlueApp 需要蓝牙扫描、连接设备并收发调试数据。</string>
 </dict>
 </plist>

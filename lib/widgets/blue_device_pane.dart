@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:blue_app/core/app_log.dart';
+import 'package:blue_app/pages/blue_serial_device_page.dart';
 import 'package:blue_app/session/fbp_gatt_session.dart';
 import 'package:blue_app/session/link_session.dart';
 import 'package:blue_app/session/scan_item.dart';
@@ -81,6 +82,9 @@ class _BlueDevicePaneState extends State<BlueDevicePane> {
         if (!connected) {
           return _buildPlaceholder(context);
         }
+        if (!widget.session.hasGattTree) {
+          return _buildSerialBody(context);
+        }
         if (_gatt == null) {
           return _buildPlaceholder(context);
         }
@@ -89,6 +93,59 @@ class _BlueDevicePaneState extends State<BlueDevicePane> {
         }
         return _buildPhoneBody(context);
       },
+    );
+  }
+
+  Widget _buildSerialBody(BuildContext context) {
+    final palette = BlueTheme.of(context);
+    final item = widget.session.connectedItem;
+    final name = (item?.name.trim().isNotEmpty ?? false) ? item!.name : (item?.id ?? '—');
+    final composer = BlueSerialComposer(session: widget.session);
+    if (_wide) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ColoredBox(
+            color: palette.panel,
+            child: Padding(
+              padding: _styles.deviceTopWidePadding,
+              child: Row(
+                children: [
+                  Icon(Icons.cable, size: 18, color: palette.accent),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(name, style: BlueTextStyles.deviceName(context), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      item?.id ?? '',
+                      style: BlueTheme.mono(context, fontSize: _styles.deviceRemoteIdFontSize, color: palette.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => unawaited(widget.session.disconnect()),
+                    child: Text('断开', style: TextStyle(fontWeight: FontWeight.w700, color: palette.danger)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Divider(height: 1, color: palette.border),
+          Expanded(
+            child: Align(alignment: Alignment.bottomCenter, child: composer),
+          ),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        Expanded(child: BlueConsolePanel(session: widget.session, fillsHeight: true)),
+        composer,
+      ],
     );
   }
 

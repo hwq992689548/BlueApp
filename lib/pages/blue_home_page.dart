@@ -2,11 +2,16 @@ import 'dart:async';
 
 import 'package:blue_app/core/app_log.dart';
 import 'package:blue_app/core/blue_prefs.dart';
+import 'package:blue_app/core/feasy_platform.dart';
 import 'package:blue_app/pages/blue_gatt_device_page.dart';
 import 'package:blue_app/pages/blue_scan_page.dart';
 import 'package:blue_app/pages/blue_scope.dart';
+import 'package:blue_app/pages/blue_serial_device_page.dart';
+import 'package:blue_app/session/classic_spp_session.dart';
 import 'package:blue_app/session/fbp_gatt_session.dart';
+import 'package:blue_app/session/feasy_link_session.dart';
 import 'package:blue_app/session/link_session.dart';
+import 'package:blue_app/session/scan_kind.dart';
 import 'package:blue_app/session/session_host.dart';
 import 'package:blue_app/theme/blue_theme.dart';
 import 'package:blue_app/widgets/blue_console_panel.dart';
@@ -31,7 +36,8 @@ class BlueHomePage extends StatefulWidget {
 
 class _BlueHomePageState extends State<BlueHomePage> {
   SessionHost? _ownedHost;
-  late final LinkSession _session;
+  SessionHost? _host;
+  late LinkSession _session;
   late final BluePrefs _prefs;
   final TextEditingController _keywordController = TextEditingController();
   StreamSubscription<bool>? _connectedSub;
@@ -41,6 +47,14 @@ class _BlueHomePageState extends State<BlueHomePage> {
   bool _connected = false;
   String? _connectingId;
 
+  bool get _showClassicFilter {
+    final host = _host;
+    if (host == null) {
+      return false;
+    }
+    return host.classicSupported() && !host.useFeasy;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -48,31 +62,41 @@ class _BlueHomePageState extends State<BlueHomePage> {
     _prefs = widget.prefs ?? BluePrefs();
     if (widget.session != null) {
       _session = widget.session!;
+      _host = widget.host;
     } else if (widget.host != null) {
-      _session = widget.host!.current;
+      _host = widget.host;
+      _session = _host!.current;
     } else {
       _ownedHost = SessionHost(
         createGatt: FbpGattSession.new,
-        createClassic: () => throw UnsupportedError('经典蓝牙尚未接入'),
-        createFeasy: () => throw UnsupportedError('Feasy 尚未接入'),
-        feasySupported: () => false,
-        classicSupported: () => false,
+        createClassic: ClassicSppSession.new,
+        createFeasy: FeasyLinkSession.new,
+        feasySupported: () => FeasyPlatform.isSupported,
+        classicSupported: () => FeasyPlatform.classicSupported,
       );
-      _session = _ownedHost!.current;
+      _host = _ownedHost;
+      _session = _host!.current;
     }
+    _bindConnected(_session);
+    unawaited(_loadPrefs());
+    _keywordController.addListener(_onKeywordChanged);
+  }
+
+  void _bindConnected(LinkSession session) {
+    unawaited(_connectedSub?.cancel());
+    _session = session;
     _connectedSub = _session.isConnected$.listen((value) {
       if (mounted) {
         setState(() => _connected = value);
       }
     });
-    unawaited(_loadPrefs());
-    _keywordController.addListener(_onKeywordChanged);
   }
 
   Future<void> _loadPrefs() async {
     final keyword = await _prefs.readKeyword();
     final hideInvalid = await _prefs.readHideInvalid();
     final lightMode = await _prefs.readLight();
+    final useFeasy = await _prefs.readUseFeasy();
     if (!mounted) {
       return;
     }
@@ -81,6 +105,95 @@ class _BlueHomePageState extends State<BlueHomePage> {
       _lightMode = lightMode;
       _keywordController.text = keyword;
     });
+    final host = _host;
+    if (useFeasy && host != null && host.feasySupported()) {
+      await _applyFeasy(true, persist: false);
+    }
+  }
+
+  Future<void> _applyFeasy(bool value, {bool persist = true}) async {
+    final host = _host;
+    if (host == null) {
+      return;
+    }
+    try {
+      await host.setUseFeasy(value);
+      _bindConnected(host.current);
+      final current = host.current;
+      if (value && current is FeasyLinkSession) {
+        await current.initialize();
+      }
+      if (persist) {
+        await _prefs.writeUseFeasy(value);
+      }
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      if (host.useFeasy) {
+        try {
+          await host.setUseFeasy(false);
+        } catch (_) {}
+        _bindConnected(host.current);
+      }
+      _toast('Feasy 仅手机可用');
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  Future<void> _setRadioFilter(RadioFilter value) async {
+    final host = _host;
+    if (host == null) {
+      return;
+    }
+    try {
+      await host.setRadioFilter(value);
+      _bindConnected(host.current);
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      _toast('$e');
+    }
+  }
+
+  void _toast(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _openSettings() {
+    final host = _host;
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            return SafeArea(
+              child: SwitchListTile(
+                title: const Text('使用 Feasy 链路'),
+                value: host?.useFeasy ?? false,
+                onChanged: (value) async {
+                  await _applyFeasy(value);
+                  setSheetState(() {});
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _devicePage() {
+    if (_session.hasGattTree) {
+      return const BlueGattDevicePage();
+    }
+    return const BlueSerialDevicePage();
   }
 
   @override
@@ -125,6 +238,11 @@ class _BlueHomePageState extends State<BlueHomePage> {
         onHideInvalidChanged: _onHideInvalidChanged,
         onKeywordPersist: (value) => unawaited(_prefs.writeKeyword(value)),
         onConnectingIdChanged: (id) => setState(() => _connectingId = id),
+        host: _host,
+        showClassicFilter: _showClassicFilter,
+        radioFilter: _host?.radioFilter ?? RadioFilter.ble,
+        onRadioFilterChanged: (value) => unawaited(_setRadioFilter(value)),
+        onUseFeasyChanged: (value) => _applyFeasy(value),
         child: child,
       ),
     );
@@ -151,8 +269,10 @@ class _BlueHomePageState extends State<BlueHomePage> {
               if (_connected) {
                 routes.add(
                   MaterialPageRoute<void>(
-                    settings: const RouteSettings(name: BlueScanPage.deviceRoute),
-                    builder: (_) => const BlueGattDevicePage(),
+                    settings: RouteSettings(
+                      name: _session.hasGattTree ? BlueScanPage.deviceRoute : BlueScanPage.serialRoute,
+                    ),
+                    builder: (_) => _devicePage(),
                   ),
                 );
               }
@@ -161,6 +281,9 @@ class _BlueHomePageState extends State<BlueHomePage> {
             onGenerateRoute: (settings) {
               if (settings.name == BlueScanPage.deviceRoute) {
                 return MaterialPageRoute<void>(builder: (_) => const BlueGattDevicePage());
+              }
+              if (settings.name == BlueScanPage.serialRoute) {
+                return MaterialPageRoute<void>(builder: (_) => const BlueSerialDevicePage());
               }
               return MaterialPageRoute<void>(builder: (_) => const BlueScanPage());
             },
@@ -179,6 +302,11 @@ class _BlueHomePageState extends State<BlueHomePage> {
       appBar: AppBar(
         title: const Text('BlueApp'),
         actions: [
+          IconButton(
+            tooltip: '设置',
+            onPressed: _openSettings,
+            icon: Icon(Icons.settings_outlined, color: palette.textSecondary),
+          ),
           IconButton(
             tooltip: _lightMode ? '夜间模式' : '白日模式',
             onPressed: _toggleLightMode,
@@ -202,6 +330,10 @@ class _BlueHomePageState extends State<BlueHomePage> {
                 onConnectingIdChanged: (id) => setState(() => _connectingId = id),
                 onConnectSucceeded: () {},
                 compact: true,
+                showClassicFilter: _showClassicFilter,
+                radioFilter: _host?.radioFilter ?? RadioFilter.ble,
+                onRadioFilterChanged: (value) => unawaited(_setRadioFilter(value)),
+                tryTurnOnIfOff: _host?.classicSupported() ?? false,
               ),
             ),
           ),

@@ -1,5 +1,7 @@
 import 'package:blue_app/core/blue_prefs.dart';
 import 'package:blue_app/session/link_session.dart';
+import 'package:blue_app/session/scan_kind.dart';
+import 'package:blue_app/session/session_host.dart';
 import 'package:flutter/material.dart';
 
 /// 页面树共享的会话与偏好。
@@ -16,6 +18,11 @@ class BlueScope extends InheritedWidget {
     required this.onHideInvalidChanged,
     required this.onKeywordPersist,
     required this.onConnectingIdChanged,
+    this.host,
+    this.showClassicFilter = false,
+    this.radioFilter = RadioFilter.ble,
+    this.onRadioFilterChanged,
+    this.onUseFeasyChanged,
     required super.child,
   });
 
@@ -29,6 +36,11 @@ class BlueScope extends InheritedWidget {
   final ValueChanged<bool> onHideInvalidChanged;
   final ValueChanged<String> onKeywordPersist;
   final ValueChanged<String?> onConnectingIdChanged;
+  final SessionHost? host;
+  final bool showClassicFilter;
+  final RadioFilter radioFilter;
+  final ValueChanged<RadioFilter>? onRadioFilterChanged;
+  final Future<void> Function(bool value)? onUseFeasyChanged;
 
   static BlueScope of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<BlueScope>();
@@ -49,6 +61,11 @@ class BlueScope extends InheritedWidget {
         onLightModeToggle != oldWidget.onLightModeToggle ||
         onHideInvalidChanged != oldWidget.onHideInvalidChanged ||
         onKeywordPersist != oldWidget.onKeywordPersist ||
-        onConnectingIdChanged != oldWidget.onConnectingIdChanged;
+        onConnectingIdChanged != oldWidget.onConnectingIdChanged ||
+        host != oldWidget.host ||
+        showClassicFilter != oldWidget.showClassicFilter ||
+        radioFilter != oldWidget.radioFilter ||
+        onRadioFilterChanged != oldWidget.onRadioFilterChanged ||
+        onUseFeasyChanged != oldWidget.onUseFeasyChanged;
   }
 }
