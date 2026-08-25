@@ -36,7 +36,7 @@ void main() {
       feasySupported: () => false,
       classicSupported: () => false,
     );
-    expect(() => host.setUseFeasy(true), throwsA(isA<UnsupportedError>()));
+    await expectLater(host.setUseFeasy(true), throwsA(isA<UnsupportedError>()));
     expect(gatt.disposeCount, 0);
     expect(host.current, same(gatt));
   });

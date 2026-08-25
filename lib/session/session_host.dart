@@ -18,17 +18,19 @@ class SessionHost {
 
   LinkSession _current;
   LinkSession get current => _current;
-  bool useFeasy = false;
-  RadioFilter radioFilter = RadioFilter.ble;
+  bool _useFeasy = false;
+  bool get useFeasy => _useFeasy;
+  RadioFilter _radioFilter = RadioFilter.ble;
+  RadioFilter get radioFilter => _radioFilter;
 
   Future<void> setUseFeasy(bool value) async {
     if (value && !feasySupported()) {
       throw UnsupportedError('Feasy 仅 Android/iOS');
     }
-    if (value == useFeasy) {
+    if (value == _useFeasy) {
       return;
     }
-    useFeasy = value;
+    _useFeasy = value;
     await _rebuild();
   }
 
@@ -36,11 +38,11 @@ class SessionHost {
     if (value == RadioFilter.classic && !classicSupported()) {
       throw UnsupportedError('经典蓝牙仅 Android');
     }
-    if (value == radioFilter && !useFeasy) {
+    if (value == _radioFilter && !_useFeasy) {
       return;
     }
-    radioFilter = value;
-    if (useFeasy) {
+    _radioFilter = value;
+    if (_useFeasy) {
       return;
     }
     await _rebuild();
@@ -50,9 +52,9 @@ class SessionHost {
     await _current.stopScan();
     await _current.disconnect();
     await _current.dispose();
-    if (useFeasy) {
+    if (_useFeasy) {
       _current = createFeasy();
-    } else if (radioFilter == RadioFilter.classic) {
+    } else if (_radioFilter == RadioFilter.classic) {
       _current = createClassic();
     } else {
       _current = createGatt();
