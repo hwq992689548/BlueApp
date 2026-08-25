@@ -1,0 +1,25 @@
+name: blue_app
+description: BlueApp bluetooth debug tool.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+  flutter: ">=3.32.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_blue_plus: ^2.3.10
+  rxdart: ^0.28.0
+  shared_preferences: ^2.5.5
+  feasy_blue_sdk:
+    path: ../../work/laserpecker-flutter/lp_plugins/feasy_blue_sdk
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
