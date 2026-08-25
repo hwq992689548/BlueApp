@@ -211,8 +211,20 @@ class ClassicSppPlugin(
         disconnectInternal()
         val device = adapter.getRemoteDevice(address)
         val sock = device.createRfcommSocketToServiceRecord(SPP_UUID)
-        sock.connect()
+        // Assign early so disconnect() can cancel an in-flight connect().
         socket = sock
+        try {
+            sock.connect()
+        } catch (e: Exception) {
+            try {
+                sock.close()
+            } catch (_: Exception) {
+            }
+            if (socket === sock) {
+                socket = null
+            }
+            throw e
+        }
         inputStream = sock.inputStream
         outputStream = sock.outputStream
         emit(mapOf("type" to "connected", "id" to address))

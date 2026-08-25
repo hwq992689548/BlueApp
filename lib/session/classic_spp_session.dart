@@ -135,8 +135,11 @@ class ClassicSppSession implements LinkSession {
     final completer = Completer<void>();
     _connectCompleter = completer;
     try {
-      await _channel.connect(item.id);
-      await completer.future.timeout(timeout);
+      // Timeout covers MethodChannel connect + waiting for native `connected`.
+      await Future<void>(() async {
+        await _channel.connect(item.id);
+        await completer.future;
+      }).timeout(timeout);
       if (!_disposed) {
         _isConnected$.add(true);
         AppLog.success('[连接] ClassicSpp 已连接 ${item.id}');
@@ -144,10 +147,9 @@ class ClassicSppSession implements LinkSession {
       }
     } catch (e, st) {
       AppLog.error('[连接] ClassicSpp 失败 $e\n$st');
-      connectedItem = null;
-      if (!_disposed) {
-        _isConnected$.add(false);
-      }
+      try {
+        await disconnect();
+      } catch (_) {}
       rethrow;
     } finally {
       if (identical(_connectCompleter, completer)) {
