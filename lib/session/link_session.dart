@@ -19,4 +19,7 @@ abstract class LinkSession {
   Future<void> send(List<int> bytes);
   void clearLogs();
   Future<void> dispose();
+
+  /// Feasy 等链路在切过去之后立刻初始化；默认空操作。
+  Future<void> prepare() async {}
 }

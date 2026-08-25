@@ -41,6 +41,26 @@ void main() {
     expect(host.current, same(gatt));
   });
 
+  test('Feasy prepare 失败则回滚到 GATT', () async {
+    final gatt = FakeLinkSession(scanKind: ScanKind.ble);
+    final feasy = FakeLinkSession(scanKind: ScanKind.feasy)..prepareError = Exception('native down');
+    var gattMade = 0;
+    final host = SessionHost(
+      createGatt: () {
+        gattMade += 1;
+        return gattMade == 1 ? gatt : FakeLinkSession(scanKind: ScanKind.ble);
+      },
+      createClassic: () => FakeLinkSession(scanKind: ScanKind.classic),
+      createFeasy: () => feasy,
+      feasySupported: () => true,
+      classicSupported: () => true,
+    );
+    await expectLater(host.setUseFeasy(true), throwsA(isA<Exception>()));
+    expect(host.useFeasy, isFalse);
+    expect(host.current.scanKind, ScanKind.ble);
+    expect(feasy.disposeCount, 1);
+  });
+
   test('切到经典蓝牙会断开 GATT 会话', () async {
     final gatt = FakeLinkSession(scanKind: ScanKind.ble);
     final classic = FakeLinkSession(scanKind: ScanKind.classic);

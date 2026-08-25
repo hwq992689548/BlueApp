@@ -127,6 +127,11 @@ class _BlueSerialComposerState extends State<BlueSerialComposer> {
         final ms = (parsed ?? BluePrefs.defaultLoopMs).clamp(BluePrefs.minLoopMs, BluePrefs.maxLoopMs);
         return Duration(milliseconds: ms);
       },
+      onError: (error, _) {
+        if (mounted) {
+          _toast('$error');
+        }
+      },
     );
     unawaited(_loadPrefs());
   }

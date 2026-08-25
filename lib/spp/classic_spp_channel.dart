@@ -15,6 +15,10 @@ class ClassicSppChannel {
 
   Future<void> connect(String address) => method.invokeMethod('connect', {'address': address});
 
+  Future<void> requestPermissions() async {
+    await method.invokeMethod('requestPermissions');
+  }
+
   Future<void> disconnect() => method.invokeMethod('disconnect');
 
   Future<void> write(Uint8List data) => method.invokeMethod('write', {'data': data});

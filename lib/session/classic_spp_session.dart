@@ -80,6 +80,7 @@ class ClassicSppSession implements LinkSession {
     _ensureNotDisposed();
     _ensureAndroid();
     AppLog.info('[扫描] ClassicSpp start timeout=${timeout.inSeconds}s');
+    await _channel.requestPermissions();
     await stopScan();
     _devices.clear();
     _scanResults$.add(const []);
@@ -190,6 +191,9 @@ class ClassicSppSession implements LinkSession {
       _pushLogs();
     }
   }
+
+  @override
+  Future<void> prepare() async {}
 
   @override
   Future<void> dispose() async {

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:blue_app/core/app_log.dart';
 import 'package:blue_app/core/blue_prefs.dart';
+import 'package:blue_app/core/feasy_errors.dart';
 import 'package:blue_app/core/feasy_platform.dart';
 import 'package:blue_app/pages/blue_gatt_device_page.dart';
 import 'package:blue_app/pages/blue_scan_page.dart';
@@ -119,10 +120,6 @@ class _BlueHomePageState extends State<BlueHomePage> {
     try {
       await host.setUseFeasy(value);
       _bindConnected(host.current);
-      final current = host.current;
-      if (value && current is FeasyLinkSession) {
-        await current.initialize();
-      }
       if (persist) {
         await _prefs.writeUseFeasy(value);
       }
@@ -136,7 +133,7 @@ class _BlueHomePageState extends State<BlueHomePage> {
         } catch (_) {}
         _bindConnected(host.current);
       }
-      _toast('Feasy 仅手机可用');
+      _toast(feasySwitchErrorToast(e));
       if (mounted) {
         setState(() {});
       }

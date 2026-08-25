@@ -30,8 +30,15 @@ class SessionHost {
     if (value == _useFeasy) {
       return;
     }
+    final previous = _useFeasy;
     _useFeasy = value;
-    await _rebuild();
+    try {
+      await _rebuild();
+    } catch (e) {
+      _useFeasy = previous;
+      await _rollbackCurrent();
+      rethrow;
+    }
   }
 
   Future<void> setRadioFilter(RadioFilter value) async {
@@ -48,16 +55,32 @@ class SessionHost {
     await _rebuild();
   }
 
-  Future<void> _rebuild() async {
-    await _current.stopScan();
-    await _current.disconnect();
-    await _current.dispose();
+  LinkSession _createCurrent() {
     if (_useFeasy) {
-      _current = createFeasy();
-    } else if (_radioFilter == RadioFilter.classic) {
-      _current = createClassic();
-    } else {
-      _current = createGatt();
+      return createFeasy();
     }
+    if (_radioFilter == RadioFilter.classic) {
+      return createClassic();
+    }
+    return createGatt();
+  }
+
+  Future<void> _teardown(LinkSession session) async {
+    await session.stopScan();
+    await session.disconnect();
+    await session.dispose();
+  }
+
+  Future<void> _rollbackCurrent() async {
+    try {
+      await _teardown(_current);
+    } catch (_) {}
+    _current = _createCurrent();
+  }
+
+  Future<void> _rebuild() async {
+    await _teardown(_current);
+    _current = _createCurrent();
+    await _current.prepare();
   }
 }

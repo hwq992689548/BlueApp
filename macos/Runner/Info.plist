@@ -28,5 +28,7 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>BlueApp 需要蓝牙扫描、连接设备并收发调试数据。</string>
 </dict>
 </plist>

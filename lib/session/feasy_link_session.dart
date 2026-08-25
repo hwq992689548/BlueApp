@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:blue_app/core/app_log.dart';
 import 'package:blue_app/core/feasy_platform.dart';
@@ -12,6 +11,7 @@ import 'package:blue_app/session/scan_item.dart';
 import 'package:blue_app/session/scan_kind.dart';
 import 'package:feasy_blue_sdk/feasy_blue_sdk.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:rxdart/rxdart.dart';
 
 /// Feasy 纯字节通道：Android SPP / iOS FACP，无 GATT 树、无 LP 协议。
@@ -83,6 +83,9 @@ class FeasyLinkSession implements LinkSession {
     _initialized = true;
     AppLog.success('[Feasy] initialize 完成');
   }
+
+  @override
+  Future<void> prepare() => initialize();
 
   @override
   Future<bool> isBluetoothOn() async {
@@ -260,8 +263,21 @@ class FeasyLinkSession implements LinkSession {
     _publishScan();
   }
 
+  @visibleForTesting
+  void debugEmitConnectionState(FeasyBlueConnectionStateEvent event) {
+    _onConnectionState(event);
+  }
+
+  bool _isOurAddress(String address) {
+    final expected = _connectingAddress ?? connectedItem?.id;
+    return expected != null && expected == address;
+  }
+
   void _onConnectionState(FeasyBlueConnectionStateEvent event) {
     if (_disposed) {
+      return;
+    }
+    if (!_isOurAddress(event.address)) {
       return;
     }
     switch (event.state) {
@@ -270,16 +286,12 @@ class FeasyLinkSession implements LinkSession {
           _isConnected$.add(true);
         }
         final c = _connectCompleter;
-        if (c != null &&
-            !c.isCompleted &&
-            (_connectingAddress == null || event.address == _connectingAddress)) {
+        if (c != null && !c.isCompleted) {
           c.complete();
         }
       case FeasyBlueConnectionState.failed:
         final c = _connectCompleter;
-        if (c != null &&
-            !c.isCompleted &&
-            (_connectingAddress == null || event.address == _connectingAddress)) {
+        if (c != null && !c.isCompleted) {
           c.completeError(StateError('Feasy 连接失败 ${event.address}'));
         }
         if (!_disposed) {

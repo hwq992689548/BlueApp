@@ -27,6 +27,7 @@ class FakeLinkSession implements LinkSession {
   Object? connectError;
   Object? startScanError;
   Object? turnOnError;
+  Object? prepareError;
   bool bluetoothOn = true;
 
   final _scanResults$ = BehaviorSubject<List<ScanItem>>.seeded(const []);
@@ -92,4 +93,11 @@ class FakeLinkSession implements LinkSession {
   void clearLogs() {}
   @override
   Future<void> dispose() async => disposeCount += 1;
+
+  @override
+  Future<void> prepare() async {
+    if (prepareError != null) {
+      throw prepareError!;
+    }
+  }
 }

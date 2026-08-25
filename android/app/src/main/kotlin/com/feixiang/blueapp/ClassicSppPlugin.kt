@@ -2,6 +2,7 @@ package com.feixiang.blueapp
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
@@ -14,6 +15,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
@@ -30,16 +32,18 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Android 通用经典蓝牙 RFCOMM / SPP（UUID 00001101-...）。
  */
 class ClassicSppPlugin(
-    private val context: Context,
+    private val activity: Activity,
     messenger: BinaryMessenger,
 ) : MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
 
     companion object {
         private const val METHOD = "com.feixiang.blueapp/spp"
         private const val EVENTS = "com.feixiang.blueapp/spp_events"
+        private const val PERMISSION_REQUEST = 0xB10E
         private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     }
 
+    private val context: Context get() = activity
     private val methodChannel = MethodChannel(messenger, METHOD)
     private val eventChannel = EventChannel(messenger, EVENTS)
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -51,6 +55,7 @@ class ClassicSppPlugin(
     private var outputStream: OutputStream? = null
     private val reading = AtomicBoolean(false)
     private var discoveryRegistered = false
+    private var permissionResult: MethodChannel.Result? = null
 
     private val discoveryReceiver = object : BroadcastReceiver() {
         @SuppressLint("MissingPermission")
@@ -105,6 +110,7 @@ class ClassicSppPlugin(
                     result.error("startDiscovery", e.message, null)
                 }
             }
+            "requestPermissions" -> requestPermissions(result)
             "stopDiscovery" -> {
                 try {
                     stopDiscovery()
@@ -322,13 +328,65 @@ class ClassicSppPlugin(
         return adapter ?: throw IllegalStateException("BluetoothAdapter unavailable")
     }
 
-    private fun ensureBluetoothPermissions() {
+    private fun missingPermissions(): List<String> {
+        val needed = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val connect = ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT)
-            val scan = ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN)
-            if (connect != PackageManager.PERMISSION_GRANTED || scan != PackageManager.PERMISSION_GRANTED) {
-                throw SecurityException("BLUETOOTH_CONNECT/SCAN not granted")
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                needed.add(Manifest.permission.BLUETOOTH_CONNECT)
             }
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                needed.add(Manifest.permission.BLUETOOTH_SCAN)
+            }
+        }
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            needed.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+        return needed
+    }
+
+    private fun requestPermissions(result: MethodChannel.Result) {
+        val needed = missingPermissions()
+        if (needed.isEmpty()) {
+            result.success(true)
+            return
+        }
+        if (permissionResult != null) {
+            result.error("permission", "permission request already in flight", null)
+            return
+        }
+        permissionResult = result
+        ActivityCompat.requestPermissions(activity, needed.toTypedArray(), PERMISSION_REQUEST)
+    }
+
+    fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ): Boolean {
+        if (requestCode != PERMISSION_REQUEST) {
+            return false
+        }
+        val pending = permissionResult ?: return true
+        permissionResult = null
+        val granted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+        if (granted) {
+            pending.success(true)
+        } else {
+            pending.error("permission", "BLUETOOTH_CONNECT/SCAN not granted", null)
+        }
+        return true
+    }
+
+    private fun ensureBluetoothPermissions() {
+        val missing = missingPermissions()
+        if (missing.isNotEmpty()) {
+            throw SecurityException("BLUETOOTH_CONNECT/SCAN not granted")
         }
     }
 

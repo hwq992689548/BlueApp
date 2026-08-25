@@ -12,6 +12,7 @@ class FakeClassicSppChannel extends ClassicSppChannel {
 
   final Duration connectDelay;
   int disconnectCalls = 0;
+  int requestPermissionCalls = 0;
   final _events = StreamController<Map<dynamic, dynamic>>.broadcast();
 
   @override
@@ -24,6 +25,11 @@ class FakeClassicSppChannel extends ClassicSppChannel {
 
   @override
   Future<void> stopDiscovery() async {}
+
+  @override
+  Future<void> requestPermissions() async {
+    requestPermissionCalls += 1;
+  }
 
   @override
   Future<void> startDiscovery() async {}
@@ -64,5 +70,14 @@ void main() {
     // start-of-connect disconnect + failure-path disconnect
     expect(fake.disconnectCalls, greaterThanOrEqualTo(2));
     expect(session.connectedItem, isNull);
+  });
+
+  test('startScan 先请求运行时权限再 discovery', () async {
+    FeasyPlatform.debugClassicSupported = true;
+    final fake = FakeClassicSppChannel();
+    final session = ClassicSppSession(channel: fake);
+    addTearDown(session.dispose);
+    await session.startScan(timeout: const Duration(milliseconds: 50));
+    expect(fake.requestPermissionCalls, 1);
   });
 }

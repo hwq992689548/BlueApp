@@ -16,4 +16,16 @@ void main() {
     await spp.connect('AA:BB:CC:DD:EE:FF');
     expect(calls, ['connect']);
   });
+
+  test('requestPermissions 走 MethodChannel', () async {
+    const channel = MethodChannel('com.feixiang.blueapp/spp');
+    final calls = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call.method);
+      return true;
+    });
+    final spp = ClassicSppChannel();
+    await spp.requestPermissions();
+    expect(calls, ['requestPermissions']);
+  });
 }

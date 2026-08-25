@@ -19,6 +19,26 @@ void main() {
     expect(sent.length, n);
   });
 
+  test('send 失败则 onError 并停止循环', () async {
+    var sends = 0;
+    Object? captured;
+    final sender = LoopSender(
+      send: (bytes) async {
+        sends += 1;
+        throw StateError('radio nak');
+      },
+      interval: () => const Duration(milliseconds: 20),
+      onError: (error, _) => captured = error,
+    );
+    sender.start([0x01]);
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    expect(sends, 1);
+    expect(captured, isA<StateError>());
+    expect(sender.isRunning, isFalse);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(sends, 1);
+  });
+
   test('dispose 停止 timer', () async {
     final sent = <List<int>>[];
     final sender = LoopSender(

@@ -61,6 +61,11 @@ class _BlueCharacteristicPanelState extends State<BlueCharacteristicPanel> {
         final ms = (parsed ?? BluePrefs.defaultLoopMs).clamp(BluePrefs.minLoopMs, BluePrefs.maxLoopMs);
         return Duration(milliseconds: ms);
       },
+      onError: (error, _) {
+        if (mounted) {
+          _toast('$error');
+        }
+      },
     );
     unawaited(_loadLoopMs());
   }

@@ -160,50 +160,53 @@ class FbpGattSession implements LinkSession {
     AppLog.info('[连接] 开始 id=$id name=$name timeout=${timeout.inSeconds}s');
     await stopScan();
     await disconnect();
-    _appendInfo('连接 $id');
-    connectedItem = item;
-    _device$.add(device);
-    await _connectionStateSub?.cancel();
-    _connectionStateSub = device.connectionState.listen((state) {
+    try {
+      _appendInfo('连接 $id');
+      connectedItem = item;
+      _device$.add(device);
+      await _connectionStateSub?.cancel();
+      _connectionStateSub = device.connectionState.listen((state) {
+        if (_disposed) {
+          return;
+        }
+        AppLog.info('[连接] connectionState=$state id=$id');
+        _isConnected$.add(state == BluetoothConnectionState.connected);
+        if (state == BluetoothConnectionState.disconnected) {
+          _stopRssiPolling();
+          _services$.add(const []);
+        }
+      });
+      await _mtuSub?.cancel();
+      _mtuSub = device.mtu.listen((value) {
+        if (!_disposed) {
+          _mtu$.add(value);
+          AppLog.info('[MTU] stream=$value');
+        }
+      });
+      await device.connect(license: License.nonprofit, timeout: timeout, autoConnect: false);
+      AppLog.success('[连接] connect 成功 id=$id');
+      AppLog.info('[服务] discoverServices…');
+      final services = await device.discoverServices();
       if (_disposed) {
         return;
       }
-      AppLog.info('[连接] connectionState=$state id=$id');
-      _isConnected$.add(state == BluetoothConnectionState.connected);
-      if (state == BluetoothConnectionState.disconnected) {
-        _stopRssiPolling();
-        _services$.add(const []);
+      var charCount = 0;
+      for (final service in services) {
+        charCount += service.characteristics.length;
+        AppLog.info('[服务] ${service.uuid.str} chars=${service.characteristics.length}');
       }
-    });
-    await _mtuSub?.cancel();
-    _mtuSub = device.mtu.listen((value) {
-      if (!_disposed) {
-        _mtu$.add(value);
-        AppLog.info('[MTU] stream=$value');
-      }
-    });
-    try {
-      await device.connect(license: License.nonprofit, timeout: timeout, autoConnect: false);
-      AppLog.success('[连接] connect 成功 id=$id');
+      _services$.add(services);
+      _mtu$.add(device.mtuNow);
+      _startRssiPolling(device);
+      AppLog.success('[服务] 发现完成 services=${services.length} characteristics=$charCount mtu=${device.mtuNow}');
+      _appendInfo('已连接 · ${services.length} services · $charCount chars');
     } catch (e, st) {
       AppLog.error('[连接] connect 失败 id=$id $e\n$st');
+      try {
+        await disconnect();
+      } catch (_) {}
       rethrow;
     }
-    AppLog.info('[服务] discoverServices…');
-    final services = await device.discoverServices();
-    if (_disposed) {
-      return;
-    }
-    var charCount = 0;
-    for (final service in services) {
-      charCount += service.characteristics.length;
-      AppLog.info('[服务] ${service.uuid.str} chars=${service.characteristics.length}');
-    }
-    _services$.add(services);
-    _mtu$.add(device.mtuNow);
-    _startRssiPolling(device);
-    AppLog.success('[服务] 发现完成 services=${services.length} characteristics=$charCount mtu=${device.mtuNow}');
-    _appendInfo('已连接 · ${services.length} services · $charCount chars');
   }
 
   @override
@@ -324,7 +327,11 @@ class FbpGattSession implements LinkSession {
   }
 
   @override
+  Future<void> prepare() async {}
+
+  @override
   Future<void> dispose() async {
+
     if (_disposed) {
       return;
     }

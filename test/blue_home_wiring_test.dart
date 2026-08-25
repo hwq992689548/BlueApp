@@ -68,6 +68,25 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   });
 
+  testWidgets('Feasy initialize 失败则 Toast 真实错误', (tester) async {
+    final feasy = FakeLinkSession(scanKind: ScanKind.feasy)..prepareError = Exception('native down');
+    final host = buildHost(
+      gatt: FakeLinkSession(scanKind: ScanKind.ble),
+      feasy: feasy,
+      feasySupported: true,
+    );
+    await pumpHome(tester, host: host);
+
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(Switch).last);
+    await tester.pump();
+
+    expect(find.text('Feasy 初始化失败: Exception: native down'), findsOneWidget);
+    expect(host.useFeasy, isFalse);
+    await tester.pump(const Duration(seconds: 5));
+  });
+
   testWidgets('Android 且 Feasy 关显示低功耗/经典分段', (tester) async {
     final host = buildHost(gatt: FakeLinkSession(scanKind: ScanKind.ble), classicSupported: true);
     await pumpHome(tester, host: host);
