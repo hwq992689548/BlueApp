@@ -2,6 +2,13 @@
 
 Bluetooth debug tool (Flutter). First version is for local use only — not for App Store / Play Store release.
 
+## Screenshots
+
+扫描列表 · 设备详情
+
+![扫描列表](Screenshot/scan.jpg)
+![设备详情](Screenshot/device.jpg)
+
 ## Prerequisites
 
 - Flutter SDK with constraint `>=3.32.0` (local install used for this repo: 3.44.5 stable).
