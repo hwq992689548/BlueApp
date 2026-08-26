@@ -2,8 +2,6 @@
 
 Bluetooth debug tool (Flutter). First version is for local use only — not for App Store / Play Store release.
 
-需求真源（以后改功能先看这里）：[`doc/openspec/`](doc/openspec/)（`openspec/specs/` 为现行契约，`design.md` 为架构约束）。
-
 ## Prerequisites
 
 - Flutter SDK with constraint `>=3.32.0` (local install used for this repo: 3.44.5 stable).
@@ -68,8 +66,6 @@ Android 正式包用 `scripts/lanbao-release.jks` 签名，口令在 `scripts/ke
 ## Manual pass checklist (hardware)
 
 Automated tests cover logic without real radios. **The steps below are for an operator on physical hardware** — check each box only after you verify on device. Do not treat unchecked items as done.
-
-Reference: [`doc/openspec/specs/`](doc/openspec/specs/) and hardware notes in [`doc/openspec/design.md`](doc/openspec/design.md).
 
 ### Android
 
