@@ -47,7 +47,7 @@ app.*.map.json
 # 打包产物
 /dist/
 
-# OpenSpec 需求文档走私有库 BlueApp-ops，不进公开仓
+# OpenSpec 需求文档不进本仓库
 /doc/
 /openspec
 
