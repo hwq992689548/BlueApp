@@ -63,40 +63,40 @@ class BluePalette extends ThemeExtension<BluePalette> {
   /// 强调色上的文字。
   final Color onAccent;
 
-  /// 夜间。
+  /// 夜间。色值对齐 laserpecker-flutter `LpFigmaDarkColorsV2`。
   static const dark = BluePalette(
-    canvas: Color(0xFF0B1220),
-    panel: Color(0xFF121A2B),
-    elevated: Color(0xFF1A2438),
-    border: Color(0xFF2A3650),
-    accent: Color(0xFF3DDC97),
-    accentInfo: Color(0xFF5B8CFF),
-    warn: Color(0xFFFFB020),
-    danger: Color(0xFFFF5C7A),
-    tx: Color(0xFFFF8A5B),
-    rx: Color(0xFF3DDC97),
-    textPrimary: Color(0xFFE8EEF8),
-    textSecondary: Color(0xFF9AA8C2),
-    textMuted: Color(0xFF6B7A96),
-    onAccent: Color(0xFF04120C),
+    canvas: Color(0xFF010101),
+    panel: Color(0xFF1C1C1E),
+    elevated: Color(0xFF333333),
+    border: Color(0x33FFFFFF),
+    accent: Color(0xFFFACC14),
+    accentInfo: Color(0xFF247CFF),
+    warn: Color(0xFFF08222),
+    danger: Color(0xFFFF6C61),
+    tx: Color(0xFFF08222),
+    rx: Color(0xFF24B232),
+    textPrimary: Color(0xE6FFFFFF),
+    textSecondary: Color(0x8AFFFFFF),
+    textMuted: Color(0x66FFFFFF),
+    onAccent: Color(0xFF000000),
   );
 
-  /// 白日。
+  /// 白日。色值对齐 laserpecker-flutter `LpFigmaColorsV2`。
   static const light = BluePalette(
-    canvas: Color(0xFFF3F5F9),
+    canvas: Color(0xFFF2F1F6),
     panel: Color(0xFFFFFFFF),
-    elevated: Color(0xFFEBEEF5),
-    border: Color(0xFFCDD5E4),
-    accent: Color(0xFF0C9B6A),
-    accentInfo: Color(0xFF3B6FE8),
-    warn: Color(0xFFB86E00),
-    danger: Color(0xFFD63B5A),
-    tx: Color(0xFFC45A2E),
-    rx: Color(0xFF0C9B6A),
-    textPrimary: Color(0xFF152033),
-    textSecondary: Color(0xFF5A6A85),
-    textMuted: Color(0xFF8A97AD),
-    onAccent: Color(0xFFFFFFFF),
+    elevated: Color(0xFFF6F6F6),
+    border: Color(0x1F000000),
+    accent: Color(0xFFFAC905),
+    accentInfo: Color(0xFF0066FF),
+    warn: Color(0xFFEB6E00),
+    danger: Color(0xFFDB382C),
+    tx: Color(0xFFFF7700),
+    rx: Color(0xFF00BD13),
+    textPrimary: Color(0xE5000000),
+    textSecondary: Color(0x8A000000),
+    textMuted: Color(0x66000000),
+    onAccent: Color(0xFF000000),
   );
 
   @override
@@ -158,7 +158,7 @@ class BluePalette extends ThemeExtension<BluePalette> {
   }
 }
 
-/// BlueApp独立视觉体系（不依赖 App / `$lpColors`）。
+/// BlueApp 视觉体系。色板对齐 laserpecker-flutter Figma v2，不直接依赖 `$lpColors`。
 abstract final class BlueTheme {
   /// 私有构造。
   BlueTheme._();
@@ -224,6 +224,15 @@ abstract final class BlueTheme {
           return palette.border;
         }),
         checkColor: WidgetStatePropertyAll(palette.onAccent),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: const WidgetStatePropertyAll(Color(0xFFFFFFFF)),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return palette.accent;
+          }
+          return palette.border;
+        }),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

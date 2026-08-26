@@ -7,6 +7,7 @@ import 'package:blue_app/core/hex_support.dart';
 import 'package:blue_app/core/log_entry.dart';
 import 'package:blue_app/core/log_store.dart';
 import 'package:blue_app/session/link_session.dart';
+import 'package:blue_app/session/scan_accumulator.dart';
 import 'package:blue_app/session/scan_item.dart';
 import 'package:blue_app/session/scan_kind.dart';
 import 'package:blue_app/spp/classic_spp_channel.dart';
@@ -31,7 +32,7 @@ class ClassicSppSession implements LinkSession {
   final _isConnected$ = BehaviorSubject<bool>.seeded(false);
   final _logs$ = BehaviorSubject<List<LogEntry>>.seeded(const []);
 
-  final Map<String, ScanItem> _devices = {};
+  final _accumulator = ScanAccumulator();
   StreamSubscription<Map<dynamic, dynamic>>? _eventsSub;
   Completer<void>? _connectCompleter;
   Timer? _scanTimer;
@@ -82,7 +83,7 @@ class ClassicSppSession implements LinkSession {
     AppLog.info('[扫描] ClassicSpp start timeout=${timeout.inSeconds}s');
     await _channel.requestPermissions();
     await stopScan();
-    _devices.clear();
+    _accumulator.clear();
     _scanResults$.add(const []);
     _isScanning$.add(true);
     _appendInfo('开始经典蓝牙扫描');
@@ -120,6 +121,14 @@ class ClassicSppSession implements LinkSession {
     }
     if (!_disposed) {
       _isScanning$.add(false);
+    }
+  }
+
+  @override
+  void clearScanResults() {
+    _accumulator.clear();
+    if (!_disposed) {
+      _scanResults$.add(const []);
     }
   }
 
@@ -268,12 +277,14 @@ class ClassicSppSession implements LinkSession {
     final name = raw['name']?.toString() ?? '';
     final rssiRaw = raw['rssi'];
     final rssi = rssiRaw is int ? rssiRaw : bondedFallbackRssi;
-    _devices[id] = ScanItem(
-      id: id,
-      name: name,
-      rssi: rssi,
-      kind: ScanKind.classic,
-      connectable: true,
+    _accumulator.upsert(
+      ScanItem(
+        id: id,
+        name: name,
+        rssi: rssi,
+        kind: ScanKind.classic,
+        connectable: true,
+      ),
     );
   }
 
@@ -281,7 +292,7 @@ class ClassicSppSession implements LinkSession {
     if (_disposed) {
       return;
     }
-    final list = _devices.values.toList()..sort((a, b) => b.rssi.compareTo(a.rssi));
+    final list = _accumulator.snapshot();
     _scanResults$.add(list);
   }
 

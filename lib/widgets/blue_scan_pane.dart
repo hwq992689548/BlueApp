@@ -11,6 +11,7 @@ import 'package:blue_app/theme/blue_theme.dart';
 import 'package:blue_app/widgets/blue_primary_button.dart';
 import 'package:blue_app/widgets/blue_rssi_bars.dart';
 import 'package:blue_app/widgets/blue_scan_actions.dart';
+import 'package:blue_app/widgets/blue_toast.dart';
 import 'package:flutter/material.dart';
 
 /// 扫描列表面板。
@@ -18,7 +19,6 @@ class BlueScanPane extends StatefulWidget {
   const BlueScanPane({
     super.key,
     required this.session,
-    required this.keywordController,
     required this.hideInvalid,
     required this.onHideInvalidChanged,
     required this.connectingId,
@@ -32,7 +32,6 @@ class BlueScanPane extends StatefulWidget {
   });
 
   final LinkSession session;
-  final TextEditingController keywordController;
   final bool hideInvalid;
   final ValueChanged<bool> onHideInvalidChanged;
   final String? connectingId;
@@ -49,7 +48,6 @@ class BlueScanPane extends StatefulWidget {
 }
 
 class BlueScanPaneState extends State<BlueScanPane> {
-  String _keyword = '';
   bool _permissionDenied = false;
   bool _scanning = false;
   StreamSubscription<bool>? _scanningSub;
@@ -59,19 +57,12 @@ class BlueScanPaneState extends State<BlueScanPane> {
   @override
   void initState() {
     super.initState();
-    _keyword = widget.keywordController.text;
-    widget.keywordController.addListener(_onKeywordChanged);
     _listenScanning(widget.session);
   }
 
   @override
   void didUpdateWidget(covariant BlueScanPane oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.keywordController != widget.keywordController) {
-      oldWidget.keywordController.removeListener(_onKeywordChanged);
-      widget.keywordController.addListener(_onKeywordChanged);
-      _keyword = widget.keywordController.text;
-    }
     if (oldWidget.session != widget.session) {
       _permissionDenied = false;
       _listenScanning(widget.session);
@@ -91,12 +82,7 @@ class BlueScanPaneState extends State<BlueScanPane> {
   @override
   void dispose() {
     unawaited(_scanningSub?.cancel());
-    widget.keywordController.removeListener(_onKeywordChanged);
     super.dispose();
-  }
-
-  void _onKeywordChanged() {
-    setState(() => _keyword = widget.keywordController.text);
   }
 
   Future<void> _connect(ScanItem item) async {
@@ -126,11 +112,20 @@ class BlueScanPaneState extends State<BlueScanPane> {
     );
   }
 
+  Future<void> clearScan() async {
+    if (_scanning) {
+      try {
+        await widget.session.stopScan();
+      } catch (_) {}
+    }
+    widget.session.clearScanResults();
+  }
+
   void _toast(String message) {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    BlueToast.show(context, message);
   }
 
   String _displayName(ScanItem item) {
@@ -165,7 +160,7 @@ class BlueScanPaneState extends State<BlueScanPane> {
               final results = snapshot.data ?? const [];
               final filtered = results.where((item) {
                 return ScanFilter.shouldShow(
-                  keyword: _keyword,
+                  keyword: '',
                   hideInvalid: widget.hideInvalid,
                   advName: item.name,
                   platformName: item.name,
@@ -241,39 +236,10 @@ class BlueScanPaneState extends State<BlueScanPane> {
                   return Text('${results.length}', style: BlueTextStyles.caption(context).copyWith(color: palette.textMuted));
                 },
               ),
-              const Spacer(),
-              StreamBuilder<bool>(
-                stream: widget.session.isScanning$,
-                initialData: false,
-                builder: (context, snapshot) {
-                  final scanning = snapshot.data ?? false;
-                  return TextButton(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      minimumSize: const Size(0, 32),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: () => unawaited(toggleScan()),
-                    child: Text(
-                      scanning ? '停止' : '扫描',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scanning ? palette.warn : palette.accent),
-                    ),
-                  );
-                },
-              ),
             ],
           ),
           SizedBox(height: styles.scanToolbarFieldGap),
-          TextField(
-            controller: widget.keywordController,
-            style: TextStyle(color: palette.textPrimary, fontSize: styles.scanKeywordFontSize),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: styles.scanKeywordHint,
-              prefixIcon: Icon(Icons.search, size: styles.scanSearchIconSize, color: palette.textMuted),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            ),
-          ),
+          _buildScanAndClearRow(context),
           SizedBox(height: styles.scanFilterFieldGap),
           _buildHideInvalidRow(context, styles: styles),
           if (widget.showClassicFilter) ...[
@@ -286,7 +252,6 @@ class BlueScanPaneState extends State<BlueScanPane> {
   }
 
   Widget _buildPhoneFilterCard(BuildContext context) {
-    final palette = BlueTheme.of(context);
     final styles = _styles;
     return Padding(
       padding: styles.scanFilterOuterPadding,
@@ -300,14 +265,7 @@ class BlueScanPaneState extends State<BlueScanPane> {
             SizedBox(height: styles.scanFilterTitleGap),
             Text('BLE GATT 扫描 · 列表右侧「连接」直连', style: BlueTextStyles.caption(context).copyWith(height: 1.35)),
             SizedBox(height: styles.scanFilterDescGap),
-            TextField(
-              controller: widget.keywordController,
-              style: TextStyle(color: palette.textPrimary, fontSize: styles.scanKeywordFontSize),
-              decoration: InputDecoration(
-                hintText: styles.scanKeywordHint,
-                prefixIcon: Icon(Icons.search, size: styles.scanSearchIconSize, color: palette.textMuted),
-              ),
-            ),
+            _buildScanAndClearRow(context),
             SizedBox(height: styles.scanFilterFieldGap),
             _buildHideInvalidRow(context, styles: styles),
             if (widget.showClassicFilter) ...[
@@ -317,6 +275,63 @@ class BlueScanPaneState extends State<BlueScanPane> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildScanAndClearRow(BuildContext context) {
+    final palette = BlueTheme.of(context);
+    final radius = BorderRadius.circular(10);
+    return Row(
+      children: [
+        Expanded(
+          child: StreamBuilder<bool>(
+            stream: widget.session.isScanning$,
+            initialData: _scanning,
+            builder: (context, snapshot) {
+              final scanning = snapshot.data ?? false;
+              return Material(
+                color: scanning ? palette.warn : palette.accent,
+                borderRadius: radius,
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => unawaited(toggleScan()),
+                  borderRadius: radius,
+                  child: SizedBox(
+                    height: 36,
+                    child: Center(
+                      child: Text(
+                        scanning ? '停止' : '扫描',
+                        style: BlueTextStyles.button.copyWith(color: scanning ? palette.textPrimary : palette.onAccent),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Material(
+            color: palette.elevated,
+            shape: RoundedRectangleBorder(
+              borderRadius: radius,
+              side: BorderSide(color: palette.border),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => unawaited(clearScan()),
+              borderRadius: radius,
+              child: SizedBox(
+                height: 36,
+                child: Center(
+                  child: Text('清空', style: BlueTextStyles.button.copyWith(color: palette.textPrimary)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -476,7 +491,7 @@ class BlueScanPaneState extends State<BlueScanPane> {
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.4,
-                        color: item.connectable ? palette.accent : palette.warn,
+                        color: item.connectable ? palette.textPrimary : palette.warn,
                       ),
                     ),
                   ],

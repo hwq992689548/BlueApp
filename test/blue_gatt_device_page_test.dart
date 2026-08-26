@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/blue_test_app.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -22,7 +24,7 @@ void main() {
     final keyword = TextEditingController();
 
     await tester.pumpWidget(
-      MaterialApp(
+      blueTestApp(
         theme: BlueTheme.theme(light: false),
         home: BlueScope(
           session: session,

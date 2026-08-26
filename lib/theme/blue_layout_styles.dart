@@ -85,7 +85,7 @@ class BlueLayoutStyles {
     // —— 扫描页 · 列表 ——
     scanListPadding: EdgeInsets.fromLTRB(16, 0, 16, 16),
     scanListSeparator: 8,
-    scanEmptyMessage: '未发现设备\n点右上角「扫描」',
+    scanEmptyMessage: '未发现设备\n点「扫描」',
     // —— 扫描页 · 设备行 ——
     scanTilePadding: EdgeInsets.fromLTRB(12, 12, 12, 12),
     scanTileRadius: 12,

@@ -1,4 +1,6 @@
+import 'package:blue_app/core/app_names.dart';
 import 'package:blue_app/pages/blue_home_page.dart';
+import 'package:blue_app/widgets/lp_toast.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -11,9 +13,11 @@ class BlueApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'BlueApp',
-      home: BlueHomePage(),
+    return MaterialApp(
+      title: AppNames.en,
+      navigatorObservers: [lpToastNavigatorObserver],
+      builder: (context, child) => lpToastInit(context, child),
+      home: const BlueHomePage(),
     );
   }
 }

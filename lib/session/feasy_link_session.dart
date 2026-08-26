@@ -7,6 +7,7 @@ import 'package:blue_app/core/log_entry.dart';
 import 'package:blue_app/core/log_store.dart';
 import 'package:blue_app/session/feasy_scan_mapper.dart';
 import 'package:blue_app/session/link_session.dart';
+import 'package:blue_app/session/scan_accumulator.dart';
 import 'package:blue_app/session/scan_item.dart';
 import 'package:blue_app/session/scan_kind.dart';
 import 'package:feasy_blue_sdk/feasy_blue_sdk.dart';
@@ -40,7 +41,7 @@ class FeasyLinkSession implements LinkSession {
   final _isConnected$ = BehaviorSubject<bool>.seeded(false);
   final _logs$ = BehaviorSubject<List<LogEntry>>.seeded(const []);
 
-  final Map<String, ScanItem> _devices = {};
+  final _accumulator = ScanAccumulator();
   StreamSubscription<FeasyBlueScanDevice>? _scanSub;
   StreamSubscription<FeasyBlueConnectionStateEvent>? _connectionSub;
   StreamSubscription<FeasyBluePacketReceivedEvent>? _packetSub;
@@ -111,7 +112,7 @@ class FeasyLinkSession implements LinkSession {
     AppLog.info('[扫描] Feasy start timeout=${timeout.inSeconds}s');
     await initialize();
     await stopScan();
-    _devices.clear();
+    _accumulator.clear();
     _scanResults$.add(const []);
     _isScanning$.add(true);
     _appendInfo('开始 Feasy 扫描');
@@ -144,6 +145,14 @@ class FeasyLinkSession implements LinkSession {
     }
     if (!_disposed) {
       _isScanning$.add(false);
+    }
+  }
+
+  @override
+  void clearScanResults() {
+    _accumulator.clear();
+    if (!_disposed) {
+      _scanResults$.add(const []);
     }
   }
 
@@ -259,7 +268,7 @@ class FeasyLinkSession implements LinkSession {
     if (item.id.isEmpty) {
       return;
     }
-    _devices[item.id] = item;
+    _accumulator.upsert(item);
     _publishScan();
   }
 
@@ -330,7 +339,7 @@ class FeasyLinkSession implements LinkSession {
     if (_disposed) {
       return;
     }
-    final list = _devices.values.toList()..sort((a, b) => b.rssi.compareTo(a.rssi));
+    final list = _accumulator.snapshot();
     _scanResults$.add(list);
   }
 

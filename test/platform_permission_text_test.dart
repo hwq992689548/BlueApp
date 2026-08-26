@@ -7,13 +7,13 @@ void main() {
     final plist = File('ios/Runner/Info.plist').readAsStringSync();
     expect(plist, contains('<key>NSBluetoothAlwaysUsageDescription</key>'));
     expect(plist, contains('<key>NSBluetoothPeripheralUsageDescription</key>'));
-    expect(plist, contains('<string>BlueApp 需要蓝牙扫描、连接设备并收发调试数据。</string>'));
+    expect(plist, contains('<string>蓝宝助手需要蓝牙扫描、连接设备并收发调试数据。</string>'));
   });
 
   test('macOS Info.plist 含蓝牙用途说明', () {
     final plist = File('macos/Runner/Info.plist').readAsStringSync();
     expect(plist, contains('<key>NSBluetoothAlwaysUsageDescription</key>'));
-    expect(plist, contains('<string>BlueApp 需要蓝牙扫描、连接设备并收发调试数据。</string>'));
+    expect(plist, contains('<string>蓝宝助手需要蓝牙扫描、连接设备并收发调试数据。</string>'));
   });
 
   test('Android 经典扫描需要位置，BLUETOOTH_SCAN 不含 neverForLocation', () {

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:blue_app/core/app_log.dart';
+import 'package:blue_app/core/app_names.dart';
 import 'package:blue_app/core/blue_prefs.dart';
 import 'package:blue_app/core/feasy_errors.dart';
 import 'package:blue_app/core/feasy_platform.dart';
@@ -18,6 +19,8 @@ import 'package:blue_app/theme/blue_theme.dart';
 import 'package:blue_app/widgets/blue_console_panel.dart';
 import 'package:blue_app/widgets/blue_device_pane.dart';
 import 'package:blue_app/widgets/blue_scan_pane.dart';
+import 'package:blue_app/widgets/blue_settings_sheet.dart';
+import 'package:blue_app/widgets/blue_toast.dart';
 import 'package:flutter/material.dart';
 
 /// BlueApp 入口：宽 ≥1000 master–detail，窄屏分路由。
@@ -59,7 +62,7 @@ class _BlueHomePageState extends State<BlueHomePage> {
   @override
   void initState() {
     super.initState();
-    AppLog.info('[UI] 打开 BlueApp 首页');
+    AppLog.info('[UI] 打开 ${AppNames.zh} 首页');
     _prefs = widget.prefs ?? BluePrefs();
     if (widget.session != null) {
       _session = widget.session!;
@@ -160,29 +163,16 @@ class _BlueHomePageState extends State<BlueHomePage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    BlueToast.show(context, message);
   }
 
   void _openSettings() {
-    final host = _host;
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (sheetContext, setSheetState) {
-            return SafeArea(
-              child: SwitchListTile(
-                title: const Text('使用 Feasy 链路'),
-                value: host?.useFeasy ?? false,
-                onChanged: (value) async {
-                  await _applyFeasy(value);
-                  setSheetState(() {});
-                },
-              ),
-            );
-          },
-        );
-      },
+    unawaited(
+      BlueSettingsSheet.show(
+        context: context,
+        useFeasy: () => _host?.useFeasy ?? false,
+        onUseFeasyChanged: _applyFeasy,
+      ),
     );
   }
 
@@ -195,7 +185,7 @@ class _BlueHomePageState extends State<BlueHomePage> {
 
   @override
   void dispose() {
-    AppLog.info('[UI] 关闭 BlueApp 首页');
+    AppLog.info('[UI] 关闭 ${AppNames.zh} 首页');
     unawaited(_connectedSub?.cancel());
     _keywordController.removeListener(_onKeywordChanged);
     _keywordController.dispose();
@@ -297,7 +287,7 @@ class _BlueHomePageState extends State<BlueHomePage> {
     final consoleWidth = (totalWidth * 0.27).clamp(280.0, 400.0);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('BlueApp'),
+        title: const Text(AppNames.zh),
         actions: [
           IconButton(
             tooltip: '设置',
@@ -320,7 +310,6 @@ class _BlueHomePageState extends State<BlueHomePage> {
               color: palette.canvas,
               child: BlueScanPane(
                 session: _session,
-                keywordController: _keywordController,
                 hideInvalid: _hideInvalid,
                 onHideInvalidChanged: _onHideInvalidChanged,
                 connectingId: _connectingId,

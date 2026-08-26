@@ -5,6 +5,7 @@ import 'package:blue_app/core/hex_support.dart';
 import 'package:blue_app/core/log_entry.dart';
 import 'package:blue_app/core/log_store.dart';
 import 'package:blue_app/session/link_session.dart';
+import 'package:blue_app/session/scan_accumulator.dart';
 import 'package:blue_app/session/scan_item.dart';
 import 'package:blue_app/session/scan_kind.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -30,6 +31,7 @@ class FbpGattSession implements LinkSession {
   final _services$ = BehaviorSubject<List<BluetoothService>>.seeded(const []);
   final _rssi$ = BehaviorSubject<int?>.seeded(null);
   final _mtu$ = BehaviorSubject<int?>.seeded(null);
+  final _accumulator = ScanAccumulator();
 
   final _store = LogStore();
 
@@ -87,30 +89,27 @@ class FbpGattSession implements LinkSession {
     await stopScan();
     await _scanResultsSub?.cancel();
     _lastScanCountLogged = -1;
+    _accumulator.clear();
     _scanResults$.add(const []);
     _scanResultsSub = FlutterBluePlus.onScanResults.listen(
       (results) {
         if (_disposed) {
           return;
         }
-        final merged = <String, ScanResult>{};
         for (final result in results) {
-          merged[result.device.remoteId.str] = result;
+          _accumulator.upsert(
+            ScanItem(
+              id: result.device.remoteId.str,
+              name: result.advertisementData.advName.isNotEmpty
+                  ? result.advertisementData.advName
+                  : result.device.platformName,
+              rssi: result.rssi,
+              kind: ScanKind.ble,
+              connectable: result.advertisementData.connectable,
+            ),
+          );
         }
-        final list = merged.values
-            .map(
-              (result) => ScanItem(
-                id: result.device.remoteId.str,
-                name: result.advertisementData.advName.isNotEmpty
-                    ? result.advertisementData.advName
-                    : result.device.platformName,
-                rssi: result.rssi,
-                kind: ScanKind.ble,
-                connectable: result.advertisementData.connectable,
-              ),
-            )
-            .toList()
-          ..sort((a, b) => b.rssi.compareTo(a.rssi));
+        final list = _accumulator.snapshot();
         _scanResults$.add(list);
         if (list.length != _lastScanCountLogged) {
           _lastScanCountLogged = list.length;
@@ -148,6 +147,15 @@ class FbpGattSession implements LinkSession {
     }
     if (!_disposed) {
       _isScanning$.add(false);
+    }
+  }
+
+  @override
+  void clearScanResults() {
+    _lastScanCountLogged = -1;
+    _accumulator.clear();
+    if (!_disposed) {
+      _scanResults$.add(const []);
     }
   }
 

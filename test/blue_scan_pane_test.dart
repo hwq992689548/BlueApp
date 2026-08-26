@@ -6,6 +6,8 @@ import 'package:blue_app/widgets/blue_scan_pane.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/blue_test_app.dart';
+
 Future<void> pumpPane(
   WidgetTester tester,
   FakeLinkSession session, {
@@ -14,12 +16,11 @@ Future<void> pumpPane(
   bool compact = false,
 }) {
   return tester.pumpWidget(
-    MaterialApp(
+    blueTestApp(
       theme: BlueTheme.theme(light: false),
       home: Scaffold(
         body: BlueScanPane(
           session: session,
-          keywordController: TextEditingController(),
           hideInvalid: false,
           onHideInvalidChanged: (_) {},
           connectingId: null,
@@ -37,7 +38,6 @@ Future<void> pumpPane(
 void main() {
   testWidgets('扫描列表按 ScanFilter 过滤并显示 kind 标签', (tester) async {
     final session = FakeLinkSession(scanKind: ScanKind.ble);
-    final keyword = TextEditingController();
     session.emitScanResults(const [
       ScanItem(id: 'aa', name: 'Sensor', rssi: -40, kind: ScanKind.ble),
       ScanItem(id: 'bb', name: '', rssi: -50, kind: ScanKind.classic, connectable: false),
@@ -45,12 +45,11 @@ void main() {
     ]);
 
     await tester.pumpWidget(
-      MaterialApp(
+      blueTestApp(
         theme: BlueTheme.theme(light: false),
         home: Scaffold(
           body: BlueScanPane(
             session: session,
-            keywordController: keyword,
             hideInvalid: true,
             onHideInvalidChanged: (_) {},
             connectingId: null,
@@ -67,11 +66,8 @@ void main() {
     expect(find.text('BLE'), findsWidgets);
     expect(find.text('Feasy'), findsOneWidget);
     expect(find.text('Classic'), findsNothing);
-
-    keyword.text = 'Sen';
-    await tester.pump();
-    expect(find.text('Sensor'), findsOneWidget);
-    expect(find.text('FeasyMod'), findsNothing);
+    expect(find.text('扫描'), findsOneWidget);
+    expect(find.text('清空'), findsOneWidget);
   });
 
   testWidgets('连接失败 Toast 且留在扫描页', (tester) async {
@@ -83,12 +79,11 @@ void main() {
     var succeeded = false;
 
     await tester.pumpWidget(
-      MaterialApp(
+      blueTestApp(
         theme: BlueTheme.theme(light: false),
         home: Scaffold(
           body: BlueScanPane(
             session: session,
-            keywordController: TextEditingController(),
             hideInvalid: false,
             onHideInvalidChanged: (_) {},
             connectingId: null,
@@ -100,7 +95,7 @@ void main() {
     );
     await tester.pump();
     await tester.tap(find.text('连接'));
-    await tester.pump();
+    await pumpToast(tester);
 
     expect(succeeded, isFalse);
     expect(find.textContaining('连接失败'), findsOneWidget);
@@ -117,12 +112,30 @@ void main() {
     await pumpPane(tester, session, tryTurnOnIfOff: true, compact: true);
     await tester.pump();
     await tester.tap(find.text('扫描'));
-    await tester.pump();
+    await pumpToast(tester);
 
     expect(session.turnOnCount, 1);
     expect(session.startScanCount, 0);
     expect(find.text('请在系统设置打开蓝牙'), findsOneWidget);
     await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('清空会停扫并清列表', (tester) async {
+    final session = FakeLinkSession(scanKind: ScanKind.ble);
+    session.emitScanning(true);
+    session.emitScanResults(const [
+      ScanItem(id: 'aa', name: 'Sensor', rssi: -40, kind: ScanKind.ble),
+    ]);
+    await pumpPane(tester, session, compact: true);
+    await tester.pump();
+    expect(find.text('Sensor'), findsOneWidget);
+
+    await tester.tap(find.text('清空'));
+    await tester.pump();
+
+    expect(session.stopScanCount, 1);
+    expect(session.clearScanCount, 1);
+    expect(find.text('Sensor'), findsNothing);
   });
 
   testWidgets('权限拒绝时页面显示无法扫描且不崩溃', (tester) async {

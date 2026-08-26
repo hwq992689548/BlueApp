@@ -13,6 +13,7 @@ abstract class LinkSession {
   Future<void> turnOnBluetooth();
   Future<void> startScan({Duration timeout = const Duration(seconds: 15)});
   Future<void> stopScan();
+  void clearScanResults();
   ScanItem? get connectedItem;
   Future<void> connect(ScanItem item, {Duration timeout = const Duration(seconds: 15)});
   Future<void> disconnect();

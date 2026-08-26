@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/blue_test_app.dart';
+
 void main() {
   test('导出文本含 ISO 时间、方向、hex、ascii、message', () {
     final at = DateTime.utc(2026, 8, 25, 8, 45, 0);
@@ -39,7 +41,7 @@ void main() {
     ]);
 
     await tester.pumpWidget(
-      MaterialApp(
+      blueTestApp(
         theme: BlueTheme.theme(light: false),
         home: Scaffold(
           body: BlueConsolePanel(session: session, fillsHeight: true),
@@ -48,7 +50,7 @@ void main() {
     );
     await tester.pump();
     await tester.tap(find.text('导出'));
-    await tester.pump();
+    await pumpToast(tester);
 
     expect(copied, contains('hello'));
     expect(find.text('已复制'), findsOneWidget);

@@ -22,6 +22,7 @@ class FakeLinkSession implements LinkSession {
   int sendCount = 0;
   int turnOnCount = 0;
   int startScanCount = 0;
+  int clearScanCount = 0;
   ScanItem? lastConnected;
   List<int>? lastSent;
   Object? connectError;
@@ -68,6 +69,11 @@ class FakeLinkSession implements LinkSession {
   }
   @override
   Future<void> stopScan() async => stopScanCount += 1;
+  @override
+  void clearScanResults() {
+    clearScanCount += 1;
+    _scanResults$.add(const []);
+  }
   @override
   Future<void> connect(ScanItem item, {Duration timeout = const Duration(seconds: 15)}) async {
     connectCount += 1;

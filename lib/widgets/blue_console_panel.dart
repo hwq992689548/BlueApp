@@ -4,6 +4,7 @@ import 'package:blue_app/core/log_entry.dart';
 import 'package:blue_app/session/link_session.dart';
 import 'package:blue_app/theme/blue_text_styles.dart';
 import 'package:blue_app/theme/blue_theme.dart';
+import 'package:blue_app/widgets/blue_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -131,7 +132,7 @@ class BlueConsolePanel extends StatelessWidget {
     if (!context.mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已复制')));
+    BlueToast.success(context, '已复制');
   }
 
   static String _formatLog(LogEntry entry) {

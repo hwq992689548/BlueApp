@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Blue App</string>
+	<string>蓝宝助手</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>blue_app</string>
+	<string>BlueStack</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -67,8 +67,8 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>BlueApp 需要蓝牙扫描、连接设备并收发调试数据。</string>
+	<string>蓝宝助手需要蓝牙扫描、连接设备并收发调试数据。</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>BlueApp 需要蓝牙扫描、连接设备并收发调试数据。</string>
+	<string>蓝宝助手需要蓝牙扫描、连接设备并收发调试数据。</string>
 </dict>
 </plist>

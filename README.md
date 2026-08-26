@@ -1,6 +1,8 @@
-# BlueApp
+# 蓝宝助手 / BlueStack
 
 Bluetooth debug tool (Flutter). First version is for local use only — not for App Store / Play Store release.
+
+需求真源（以后改功能先看这里）：[`doc/openspec/`](doc/openspec/)（`openspec/specs/` 为现行契约，`design.md` 为架构约束）。
 
 ## Prerequisites
 
@@ -40,11 +42,34 @@ flutter run -d macos
 
 List targets: `flutter devices`.
 
+## 打包
+
+产物目录：`dist/<version>/`（不进 git）。
+
+```bash
+# 只打 Android APK
+./scripts/build_android.sh
+
+# 只打 iOS IPA（需 macOS + Xcode 签名，Team 76BA555MU3）
+./scripts/build_ios.sh
+
+# 一次打两个包
+./scripts/build_all.sh
+```
+
+iOS 默认 `development` 导出。改 ad-hoc / App Store：
+
+```bash
+IOS_EXPORT_METHOD=ad-hoc ./scripts/build_ios.sh
+```
+
+Android 正式包用 `scripts/lanbao-release.jks` 签名，口令在 `scripts/key.properties`（都不进 git，请自行备份）。
+
 ## Manual pass checklist (hardware)
 
 Automated tests cover logic without real radios. **The steps below are for an operator on physical hardware** — check each box only after you verify on device. Do not treat unchecked items as done.
 
-Reference: design spec §8 (`docs/superpowers/specs/2026-08-25-blueapp-design.md`).
+Reference: [`doc/openspec/specs/`](doc/openspec/specs/) and hardware notes in [`doc/openspec/design.md`](doc/openspec/design.md).
 
 ### Android
 

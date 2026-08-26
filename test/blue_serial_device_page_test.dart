@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/blue_test_app.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -24,7 +26,7 @@ void main() {
     addTearDown(keyword.dispose);
 
     await tester.pumpWidget(
-      MaterialApp(
+      blueTestApp(
         theme: BlueTheme.theme(light: false),
         home: BlueScope(
           session: session,
@@ -68,7 +70,7 @@ void main() {
     final session = await pumpSerial(tester);
     await tester.enterText(find.byKey(const Key('serial-payload')), 'ZZ');
     await tester.tap(find.text('发送'));
-    await tester.pump();
+    await pumpToast(tester);
 
     expect(find.textContaining('hex'), findsOneWidget);
     expect(session.sendCount, 0);

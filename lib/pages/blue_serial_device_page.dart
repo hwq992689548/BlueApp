@@ -10,6 +10,7 @@ import 'package:blue_app/theme/blue_text_styles.dart';
 import 'package:blue_app/theme/blue_theme.dart';
 import 'package:blue_app/widgets/blue_console_panel.dart';
 import 'package:blue_app/widgets/blue_primary_button.dart';
+import 'package:blue_app/widgets/blue_toast.dart';
 import 'package:flutter/material.dart';
 
 /// 手机窄屏：Feasy / 经典 SPP 串口控制台。
@@ -195,7 +196,7 @@ class _BlueSerialComposerState extends State<BlueSerialComposer> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    BlueToast.show(context, message);
   }
 
   @override

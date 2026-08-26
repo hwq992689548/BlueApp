@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/blue_test_app.dart';
+
 SessionHost buildHost({
   required FakeLinkSession gatt,
   FakeLinkSession? classic,
@@ -31,9 +33,7 @@ Future<void> pumpHome(
   BluePrefs? prefs,
 }) async {
   await tester.pumpWidget(
-    MaterialApp(
-      home: BlueHomePage(host: host, prefs: prefs ?? BluePrefs()),
-    ),
+    blueTestApp(home: BlueHomePage(host: host, prefs: prefs ?? BluePrefs())),
   );
   await tester.pump();
   await tester.pump();
@@ -60,12 +60,25 @@ void main() {
     expect(find.text('使用 Feasy 链路'), findsOneWidget);
 
     await tester.tap(find.byType(Switch).last);
-    await tester.pump();
+    await pumpToast(tester);
 
     expect(find.text('Feasy 仅手机可用'), findsOneWidget);
     expect(host.useFeasy, isFalse);
     expect(tester.widget<Switch>(find.byType(Switch).last).value, isFalse);
     await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('设置弹层额外垫高 50', (tester) async {
+    final host = buildHost(gatt: FakeLinkSession(scanKind: ScanKind.ble));
+    await pumpHome(tester, host: host);
+
+    await tester.tap(find.byTooltip('设置'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('设置'), findsWidgets);
+    final height = tester.getSize(find.byType(BottomSheet)).height;
+    expect(height, greaterThan(80));
+    expect(height, lessThan(280));
   });
 
   testWidgets('Feasy initialize 失败则 Toast 真实错误', (tester) async {
@@ -80,7 +93,7 @@ void main() {
     await tester.tap(find.byTooltip('设置'));
     await tester.pumpAndSettle();
     await tester.tap(find.byType(Switch).last);
-    await tester.pump();
+    await pumpToast(tester);
 
     expect(find.text('Feasy 初始化失败: Exception: native down'), findsOneWidget);
     expect(host.useFeasy, isFalse);

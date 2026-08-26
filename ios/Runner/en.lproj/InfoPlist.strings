@@ -1,0 +1,4 @@
+CFBundleDisplayName = "BlueStack";
+CFBundleName = "BlueStack";
+NSBluetoothAlwaysUsageDescription = "BlueStack needs Bluetooth to scan, connect, and exchange debug data.";
+NSBluetoothPeripheralUsageDescription = "BlueStack needs Bluetooth to scan, connect, and exchange debug data.";
